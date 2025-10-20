@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sodaro-inspired p5.js Bubble Sentiment Prototype</title>
- 
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <style>
@@ -16,12 +15,27 @@
 </head>
 <body>
   <main id="sketch"></main>
+
   <div id="about">
     <strong>Prototype:</strong> bubbles = tickers, size ≈ volume, color = sentiment (red→green), label shows % change.
     <small>Hover to expand & reveal. Inspired by interactive data-vis portfolios.</small>
+
+
+
+
+
+    
+    <a id="inspiration" href="https://editor.p5js.org/p5/sketches/Simulate:_Forces" target="_blank" rel="noopener">Inspiration: Force-directed bubbles (p5.js)</a>
   </div>
 
 <script>
+(function () {
+  const u = new URLSearchParams(location.search).get('inspo');
+  if (u) {
+    const a = document.getElementById('inspiration');
+    try { new URL(u); a.href = u; } catch(e){}
+  }
+})();
 
 const DATA = [
   { symbol: 'AAPL', name: 'Apple', change: +1.8, sentiment: +0.6, volume: 78 },
@@ -49,10 +63,8 @@ function setup() {
   greenCol = color(60, 205, 120);
   greyCol  = color(200, 205, 210);
 
-
   gMinVolume = min(DATA.map(d => d.volume));
   gMaxVolume = max(DATA.map(d => d.volume));
-
 
   bubbles = DATA.map(d => new Bubble(d));
   layoutBubbles();
@@ -61,18 +73,13 @@ function setup() {
 function draw() {
   background(10, 11, 12);
 
-
   push();
   noFill();
   drawingContext.shadowColor = 'rgba(0,0,0,0.6)';
   drawingContext.shadowBlur = 60;
   pop();
 
-
-  for (const b of bubbles) {
-    b.update();
-  }
- 
+  for (const b of bubbles) b.update();
 
   [...bubbles].sort((a,b)=>a.r - b.r).forEach(b => b.draw());
 
@@ -84,24 +91,20 @@ function windowResized() {
   layoutBubbles();
 }
 
-
 class Bubble {
   constructor(d) {
     this.name = d.name;
     this.symbol = d.symbol;
-    this.change = d.change;      
-    this.sentiment = d.sentiment; 
-    this.volume = d.volume;     
+    this.change = d.change;
+    this.sentiment = d.sentiment;
+    this.volume = d.volume;
 
     const rMin = 22, rMax = 90;
     this.rBase = map(this.volume, gMinVolume, gMaxVolume, rMin, rMax, true);
     this.r = this.rBase;
     this.targetR = this.rBase;
 
-
     this.pos = createVector(random(padding, width - padding), random(padding, height - padding));
-
-    
     this.vel = p5.Vector.random2D().mult(random(0.2, 0.6));
   }
 
@@ -110,13 +113,9 @@ class Bubble {
   }
 
   update() {
-  
-
     this.pos.add(this.vel);
     if (this.pos.x < padding || this.pos.x > width - padding) this.vel.x *= -1;
     if (this.pos.y < padding || this.pos.y > height - padding) this.vel.y *= -1;
-
-
 
     const grow = this.hovered ? 1.2 : 1.0;
     this.targetR = this.rBase * grow;
@@ -124,16 +123,11 @@ class Bubble {
   }
 
   draw() {
-
-
     const t = constrain(map(this.sentiment, -1, 1, 0, 1), 0, 1);
     const col = lerpColor(redCol, greenCol, t);
 
- 
-
     push();
     translate(this.pos.x, this.pos.y);
-
 
     drawingContext.shadowBlur = 24;
     drawingContext.shadowColor = color(red(col), green(col), blue(col), 180);
@@ -148,8 +142,6 @@ class Bubble {
     const hR = this.r * 0.55;
     ellipse(-this.r * 0.35, -this.r * 0.35, hR, hR * 0.75);
 
-
-
     textAlign(CENTER, CENTER);
     textSize(constrain(this.r * 0.36, 10, 28));
     fill(0, 0, 0, 130);
@@ -157,10 +149,7 @@ class Bubble {
     fill(255);
     text(this.symbol, 0, 0);
 
-
-    if (this.hovered) {
-      this.drawLabel();
-    }
+    if (this.hovered) this.drawLabel();
     pop();
   }
 
@@ -171,19 +160,12 @@ class Bubble {
     const tw = textWidth(label) + 16;
     const th = 26;
 
-
-
     const ox = this.pos.x + this.r + 12;
     const oy = this.pos.y - this.r - 12;
 
     push();
-   
-
-
     const x = constrain(ox, 8, width - tw - 8);
     const y = constrain(oy, 8, height - th - 8);
-
-   
 
     noStroke();
     fill(20, 22, 26, 220);
@@ -192,7 +174,6 @@ class Bubble {
     noFill();
     rect(x, y, tw, th, 8);
 
-    
     noStroke();
     fill(235);
     textAlign(LEFT, CENTER);
@@ -201,16 +182,10 @@ class Bubble {
   }
 }
 
-
 function layoutBubbles() {
-
-
-
   for (const b of bubbles) {
     b.pos.set(width/2 + random(-120, 120), height/2 + random(-120, 120));
   }
-
-
 
   for (let iter = 0; iter < 200; iter++) {
     for (let i = 0; i < bubbles.length; i++) {
@@ -227,16 +202,12 @@ function layoutBubbles() {
         }
       }
     }
-
-
     for (const b of bubbles) {
       b.pos.x = constrain(b.pos.x, padding, width - padding);
       b.pos.y = constrain(b.pos.y, padding, height - padding);
     }
   }
 }
-
-
 
 function drawLegend() {
   const x = 14, y = 14;
