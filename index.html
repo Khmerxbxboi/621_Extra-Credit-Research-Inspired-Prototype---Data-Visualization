@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sodaro-inspired p5.js Bubble Sentiment Prototype</title>
+ 
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b0b0c; color: #e9eaee; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    #about { position: fixed; left: 12px; bottom: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(6px); }
+    #about a { color: #9dd9ff; text-decoration: none; }
+    #about small { display:block; opacity:.75 }
+  </style>
+</head>
+<body>
+  <main id="sketch"></main>
+  <div id="about">
+    <strong>Prototype:</strong> bubbles = tickers, size ≈ volume, color = sentiment (red→green), label shows % change.
+    <small>Hover to expand & reveal. Inspired by interactive data-vis portfolios.</small>
+  </div>
+
+<script>
+
+const DATA = [
+  { symbol: 'AAPL', name: 'Apple', change: +1.8, sentiment: +0.6, volume: 78 },
+  { symbol: 'TSLA', name: 'Tesla', change: -2.4, sentiment: -0.5, volume: 92 },
+  { symbol: 'NVDA', name: 'NVIDIA', change: +3.2, sentiment: +0.9, volume: 110 },
+  { symbol: 'AMZN', name: 'Amazon', change: +0.4, sentiment: +0.2, volume: 84 },
+  { symbol: 'META', name: 'Meta', change: -0.9, sentiment: -0.1, volume: 70 },
+  { symbol: 'MSFT', name: 'Microsoft', change: +0.7, sentiment: +0.3, volume: 76 },
+  { symbol: 'ARM',  name: 'Arm', change: +5.1, sentiment: +0.8, volume: 60 },
+  { symbol: 'PLTR', name: 'Palantir', change: -1.2, sentiment: -0.3, volume: 58 },
+  { symbol: 'SOFI', name: 'SoFi', change: +2.9, sentiment: +0.5, volume: 50 },
+  { symbol: 'FSLR', name: 'First Solar', change: +1.1, sentiment: +0.4, volume: 44 },
+];
+
+let bubbles = [];
+let padding = 28;
+let gMinVolume, gMaxVolume;
+let redCol, greenCol, greyCol;
+
+function setup() {
+  const c = createCanvas(windowWidth, windowHeight);
+  c.parent('sketch');
+  noStroke();
+  redCol   = color(235, 80, 80);
+  greenCol = color(60, 205, 120);
+  greyCol  = color(200, 205, 210);
+
+
+  gMinVolume = min(DATA.map(d => d.volume));
+  gMaxVolume = max(DATA.map(d => d.volume));
+
+
+  bubbles = DATA.map(d => new Bubble(d));
+  layoutBubbles();
+}
+
+function draw() {
+  background(10, 11, 12);
+
+
+  push();
+  noFill();
+  drawingContext.shadowColor = 'rgba(0,0,0,0.6)';
+  drawingContext.shadowBlur = 60;
+  pop();
+
+
+  for (const b of bubbles) {
+    b.update();
+  }
+ 
+
+  [...bubbles].sort((a,b)=>a.r - b.r).forEach(b => b.draw());
+
+  drawLegend();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  layoutBubbles();
+}
+
+
+class Bubble {
+  constructor(d) {
+    this.name = d.name;
+    this.symbol = d.symbol;
+    this.change = d.change;      
+    this.sentiment = d.sentiment; 
+    this.volume = d.volume;     
+
+    const rMin = 22, rMax = 90;
+    this.rBase = map(this.volume, gMinVolume, gMaxVolume, rMin, rMax, true);
+    this.r = this.rBase;
+    this.targetR = this.rBase;
+
+
+    this.pos = createVector(random(padding, width - padding), random(padding, height - padding));
+
+    
+    this.vel = p5.Vector.random2D().mult(random(0.2, 0.6));
+  }
+
+  get hovered() {
+    return dist(mouseX, mouseY, this.pos.x, this.pos.y) <= this.r;
+  }
+
+  update() {
+  
+
+    this.pos.add(this.vel);
+    if (this.pos.x < padding || this.pos.x > width - padding) this.vel.x *= -1;
+    if (this.pos.y < padding || this.pos.y > height - padding) this.vel.y *= -1;
+
+
+
+    const grow = this.hovered ? 1.2 : 1.0;
+    this.targetR = this.rBase * grow;
+    this.r = lerp(this.r, this.targetR, 0.12);
+  }
+
+  draw() {
+
+
+    const t = constrain(map(this.sentiment, -1, 1, 0, 1), 0, 1);
+    const col = lerpColor(redCol, greenCol, t);
+
+ 
+
+    push();
+    translate(this.pos.x, this.pos.y);
+
+
+    drawingContext.shadowBlur = 24;
+    drawingContext.shadowColor = color(red(col), green(col), blue(col), 180);
+
+    fill(red(col), green(col), blue(col), 210);
+    stroke(255, 255, 255, 40);
+    strokeWeight(2);
+    circle(0, 0, this.r * 2);
+
+    noStroke();
+    fill(255, 255, 255, 38);
+    const hR = this.r * 0.55;
+    ellipse(-this.r * 0.35, -this.r * 0.35, hR, hR * 0.75);
+
+
+
+    textAlign(CENTER, CENTER);
+    textSize(constrain(this.r * 0.36, 10, 28));
+    fill(0, 0, 0, 130);
+    text(this.symbol, 0, 2);
+    fill(255);
+    text(this.symbol, 0, 0);
+
+
+    if (this.hovered) {
+      this.drawLabel();
+    }
+    pop();
+  }
+
+  drawLabel() {
+    const label = `${this.name}  |  ${this.change > 0 ? '+' : ''}${nf(this.change, 1, 1)}%`;
+
+    textSize(14);
+    const tw = textWidth(label) + 16;
+    const th = 26;
+
+
+
+    const ox = this.pos.x + this.r + 12;
+    const oy = this.pos.y - this.r - 12;
+
+    push();
+   
+
+
+    const x = constrain(ox, 8, width - tw - 8);
+    const y = constrain(oy, 8, height - th - 8);
+
+   
+
+    noStroke();
+    fill(20, 22, 26, 220);
+    rect(x, y, tw, th, 8);
+    stroke(255, 255, 255, 40);
+    noFill();
+    rect(x, y, tw, th, 8);
+
+    
+    noStroke();
+    fill(235);
+    textAlign(LEFT, CENTER);
+    text(label, x + 8, y + th / 2);
+    pop();
+  }
+}
+
+
+function layoutBubbles() {
+
+
+
+  for (const b of bubbles) {
+    b.pos.set(width/2 + random(-120, 120), height/2 + random(-120, 120));
+  }
+
+
+
+  for (let iter = 0; iter < 200; iter++) {
+    for (let i = 0; i < bubbles.length; i++) {
+      for (let j = i+1; j < bubbles.length; j++) {
+        const a = bubbles[i], b = bubbles[j];
+        const dir = p5.Vector.sub(b.pos, a.pos);
+        const distAB = max(1, dir.mag());
+        const minDist = a.r + b.r + 10;
+        if (distAB < minDist) {
+          dir.normalize();
+          const push = (minDist - distAB) * 0.5;
+          a.pos.add(p5.Vector.mult(dir, -push));
+          b.pos.add(p5.Vector.mult(dir,  push));
+        }
+      }
+    }
+
+
+    for (const b of bubbles) {
+      b.pos.x = constrain(b.pos.x, padding, width - padding);
+      b.pos.y = constrain(b.pos.y, padding, height - padding);
+    }
+  }
+}
+
+
+
+function drawLegend() {
+  const x = 14, y = 14;
+  push();
+  textAlign(LEFT, TOP);
+  textSize(16);
+  fill(235);
+  text('Market Sentiment Bubbles (prototype)', x, y);
+  textSize(12);
+  fill(200);
+  text('Size ≈ volume  •  Color: red (bearish) → green (bullish)  •  Hover to reveal', x, y+22);
+  pop();
+}
+</script>
+</body>
+</html>
